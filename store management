@@ -1,0 +1,635 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+struct product {
+    int id;
+    char pname[50];
+    int qtyAvailable;
+    float price;
+    char date[50];
+} pdt;
+
+struct product cart[100]; 
+int cartSize = 0;
+
+
+
+float cartTotal = 0.0;
+
+struct product products[] = {
+    {1, "Dove Conditioner", 10, 25.0, "2024-03-07"},
+    {2, "Pantene Conditioner", 10, 30.0, "2024-03-07"},
+    {3, "Lux Soap", 10, 15.0, "2024-03-07"},
+    {4, "Dove Soap", 5, 30.0, "2024-03-07"}
+};
+
+struct shippingInfo {
+    char address[100];
+    char contactDetails[20];
+};
+
+
+struct order {
+    struct product products[100];
+    int cartSize;
+    float totalAmount;
+    struct shippingInfo shippingDetails;
+    char date[50];
+} orderHistory[10]; 
+int orderCount=0;
+
+struct shippingInfo shippingDetails; 
+
+struct customer {
+    int custId;
+    char custName[50];
+    char custPassword[20];
+};
+
+
+struct customer customers[100];
+int customerCount = 0;
+
+
+
+void addProductToCart() {
+    int productId, quantity;
+    struct product p;
+
+    printf("Enter the product ID you want to add to the cart: ");
+    scanf("%d", &productId);
+    if (productId >= 1 && productId <= sizeof(products) / sizeof(products[0]))
+    {
+        float amount;
+        printf("\nYou have selected %s", products[productId - 1].pname);
+        printf("\nEnter the quantity of the product you want: ");
+        scanf("%d", &quantity);
+
+        
+        if (quantity > products[productId - 1].qtyAvailable) {
+            printf("Unavailable. Only %d items available for %s\n", products[productId - 1].qtyAvailable, products[productId - 1].pname);
+            return;
+        }
+
+        
+        p = products[productId - 1];
+        p.qtyAvailable = quantity;
+
+       
+        products[productId - 1].qtyAvailable -= quantity;
+
+        printf("\nYour amount is %.2f", p.price * quantity);
+
+        
+        if (productId == 3) {
+            // No discount for Lux Soap
+            printf("\nNo discount available for Lux Soap");
+            amount = p.price * quantity;
+        } else {
+            printf("\nYou have a 2%% discount for this");
+            amount = (p.price * quantity) - (0.02 * p.price * quantity);
+        }
+
+        printf("\nYour total for this product is %.2f\n", amount);
+
+        
+        cartTotal += amount;
+
+        
+        cart[cartSize++] = p;
+
+        printf("Product Added to Cart Successfully\n");
+    }
+    else
+    {
+        printf("Invalid product ID\n");
+    }
+}
+
+void displayCart() {
+    if (cartSize == 0)
+    {
+        printf("Cart is empty\n");
+        return;
+    }
+
+    printf("\n---------------------------------------------------------------------------");
+    printf("\n| %-5s | %-20s | %-10s | %-12s |", "ID", "Product Name", "Quantity", "Price/Unit");
+    printf("\n---------------------------------------------------------------------------");
+
+    for (int i = 0; i < cartSize; i++)
+    {
+        printf("\n| %-5d | %-20s | %-10d | %-12.2f |", cart[i].id, cart[i].pname, cart[i].qtyAvailable, cart[i].price);
+    }
+
+    printf("\n---------------------------------------------------------------------------");
+
+    
+    printf("\n| %-5s | %-20s | %-10s | %-12s |", "", "", "Total", "");
+    printf("\n---------------------------------------------------------------------------");
+    printf("\n| %-5s | %-20s | %-10s | %-12.2f |", "", "", "", cartTotal);
+    printf("\n---------------------------------------------------------------------------\n");
+}
+void buy() {
+    if (cartSize == 0) {
+        printf("Cart is empty. Add products before buying.\n");
+        return;
+    }
+
+    
+    printf("Enter shipping address: ");
+    scanf(" %[^\n]", shippingDetails.address);
+
+    printf("Enter contact details: ");
+    scanf(" %[^\n]", shippingDetails.contactDetails);
+
+    
+    time_t t;
+    time(&t);
+    struct tm* currentDate = localtime(&t);
+    char orderDate[50];
+    strftime(orderDate, sizeof(orderDate), "%Y-%m-%d %H:%M:%S", currentDate);
+
+    
+    orderHistory[orderCount].cartSize = cartSize;
+    for (int i = 0; i < cartSize; i++) {
+        orderHistory[orderCount].products[i] = cart[i];
+    }
+    orderHistory[orderCount].totalAmount = cartTotal;
+    strcpy(orderHistory[orderCount].date, orderDate);
+
+    
+    orderHistory[orderCount].shippingDetails = shippingDetails;
+
+    
+    orderCount++;
+
+    
+    printf("\nPurchase successful!\n");
+    printf("Your order will be shipped to %s ",shippingDetails.address);
+
+    
+    cartSize = 0;
+    cartTotal = 0.0;
+}
+
+void displayOrderHistory() {
+    if (orderCount == 0) {
+        printf("No order history available.\n");
+        return;
+    }
+
+    printf("\n------------------ORDER HISTORY------------------");
+    for (int i = 0; i < orderCount; i++) {
+        printf("\nOrder Date: %s", orderHistory[i].date);
+        printf("\n---------------------------------------------------------------------------");
+        printf("\n| %-5s | %-20s | %-10s | %-12s |", "ID", "Product Name", "Quantity", "Price/Unit");
+        printf("\n---------------------------------------------------------------------------");
+
+        for (int j = 0; j < orderHistory[i].cartSize; j++) {
+            printf("\n| %-5d | %-20s | %-10d | %-12.2f |",
+                   orderHistory[i].products[j].id,
+                   orderHistory[i].products[j].pname,
+                   orderHistory[i].products[j].qtyAvailable,
+                   orderHistory[i].products[j].price);
+        }
+
+        printf("\n---------------------------------------------------------------------------");
+        printf("\n| %-5s | %-20s | %-10s | %-12s |", "", "", "Total", "");
+        printf("\n---------------------------------------------------------------------------");
+        printf("\n| %-5s | %-20s | %-10s | %-12.2f |", "", "", "", orderHistory[i].totalAmount);
+        printf("\n---------------------------------------------------------------------------\n");
+        printf(" Your order was shipped to %s ",shippingDetails.address);
+    }
+}
+ 
+
+void applyDiscountCoupon() {
+    char couponCode[20];
+
+    printf("Enter the coupon code: ");
+    scanf("%s", couponCode);
+
+    
+    if (strcmp(couponCode, "PROMO10") == 0) {
+        
+        printf("Coupon code applied! You get a 10%% discount.\n");
+        cartTotal -= (0.10 * cartTotal);
+        printf("%.2f is your total amount after applying the promocode",cartTotal);
+    } else {
+        printf("Invalid coupon code. No discount applied.\n");
+    }
+}
+void updateProductDetails() {
+    int productId;
+
+    printf("Enter the product ID you want to update: ");
+    scanf("%d", &productId);
+
+    if (productId >= 1 && productId <= sizeof(products) / sizeof(products[0])) {
+        printf("Enter the new product name: ");
+        scanf("%s", products[productId - 1].pname);
+
+        printf("Enter the new quantity available: ");
+        scanf("%d", &products[productId - 1].qtyAvailable);
+
+        printf("Enter the new price: ");
+        scanf("%f", &products[productId - 1].price);
+
+        printf("Product details updated successfully.\n");
+    } else {
+        printf("Invalid product ID\n");
+    }
+}
+void displayProducts() {
+    printf("\n---------------------------------------------------------------------------");
+    printf("\n| %-5s | %-20s | %-10s | %-12s |", "ID", "Product Name", "Quantity", "Price/Unit");
+    printf("\n---------------------------------------------------------------------------");
+
+    for (int i = 0; i < sizeof(products) / sizeof(products[0]); i++) {
+        printf("\n| %-5d | %-20s | %-10d | %-12.2f |", products[i].id, products[i].pname, products[i].qtyAvailable, products[i].price);
+    }
+
+    printf("\n---------------------------------------------------------------------------\n");
+}
+void updateProductQuantity() {
+    int productId;
+
+    printf("Enter the product ID you want to update: ");
+    scanf("%d", &productId);
+
+    if (productId >= 1 && productId <= sizeof(products) / sizeof(products[0])) {
+        printf("Enter the new quantity available: ");
+        scanf("%d", &products[productId - 1].qtyAvailable);
+
+        printf("Product quantity updated successfully.\n");
+    } else {
+        printf("Invalid product ID\n");
+    }
+}
+void updateProductPrice() {
+    int productId;
+
+    printf("Enter the product ID you want to update: ");
+    scanf("%d", &productId);
+
+    if (productId >= 1 && productId <= sizeof(products) / sizeof(products[0])) {
+        printf("Enter the new price: ");
+        scanf("%f", &products[productId - 1].price);
+
+        printf("Product price updated successfully.\n");
+    } else {
+        printf("Invalid product ID\n");
+    }
+}
+void topSellingItems() {
+    int salesCount[sizeof(products) / sizeof(products[0])];
+
+    
+    for (int i = 0; i < sizeof(products) / sizeof(products[0]); i++) {
+        salesCount[i] = 0;
+    }
+
+    
+    for (int i = 0; i < orderCount; i++) {
+        for (int j = 0; j < orderHistory[i].cartSize; j++) {
+            int productId = orderHistory[i].products[j].id;
+            salesCount[productId - 1] += orderHistory[i].products[j].qtyAvailable;
+        }
+    }
+
+    
+    printf("\n------------------TOP 3 SELLING ITEMS------------------");
+    for (int i = 0; i < 3; i++) {
+        int maxIndex = 0;
+        for (int j = 1; j < sizeof(products) / sizeof(products[0]); j++) {
+            if (salesCount[j] > salesCount[maxIndex]) {
+                maxIndex = j;
+            }
+        }
+
+        printf("\nRank %d: %s - Sales Count: %d", i + 1, products[maxIndex].pname, salesCount[maxIndex]);
+        salesCount[maxIndex] = -1; // Mark this product as processed
+    }
+    printf("\n--------------------------------------------------------\n");
+}
+void addNewCustomer() {
+    
+    if (customerCount == 0 || (strcmp(customers[customerCount - 1].custName, "admin") == 0)) {
+        
+        struct customer newCustomer;
+
+        printf("Enter customer name: ");
+        scanf("%s", newCustomer.custName);
+
+        printf("Enter customer password: ");
+        scanf("%s", newCustomer.custPassword);
+
+        newCustomer.custId = customerCount + 1; 
+        customers[customerCount++] = newCustomer;
+
+        printf("New customer added successfully!\n");
+    } else {
+        printf("Only admin can add new customers!\n");
+    }
+}
+void cancelOrder() {
+    if (orderCount == 0) {
+        printf("No orders to cancel.\n");
+        return;
+    }
+
+    displayOrderHistory();
+
+    int itemId;
+    printf("\n Enter the item ID you want to cancel: ");
+    scanf("%d", &itemId);
+
+    int orderIndex = -1;
+    for (int i = 0; i < orderCount; i++) {
+        for (int j = 0; j < orderHistory[i].cartSize; j++) {
+            if (orderHistory[i].products[j].id == itemId) {
+                orderIndex = i;
+                break;
+            }
+        }
+        if (orderIndex != -1) {
+            break;
+        }
+    }
+
+    if (orderIndex != -1) {
+        struct tm orderDate;
+        //strptime(orderHistory[orderIndex].date, "%Y-%m-%d %H:%M:%S", &orderDate);
+        time_t orderTime = mktime(&orderDate);
+
+        time_t currentTime;
+        time(&currentTime);
+        double secondsElapsed = difftime(currentTime, orderTime);
+
+        if (secondsElapsed <= 3600) {
+            int productIndex = -1;
+            for (int i = 0; i < orderHistory[orderIndex].cartSize; i++) {
+                if (orderHistory[orderIndex].products[i].id == itemId) {
+                    productIndex = i;
+                    break;
+                }
+            }
+
+            if (productIndex != -1) {
+                int productId = orderHistory[orderIndex].products[productIndex].id;
+                products[productId - 1].qtyAvailable += orderHistory[orderIndex].products[productIndex].qtyAvailable;
+
+                for (int i = productIndex; i < orderHistory[orderIndex].cartSize - 1; i++) {
+                    orderHistory[orderIndex].products[i] = orderHistory[orderIndex].products[i + 1];
+                }
+                orderHistory[orderIndex].cartSize--;
+
+                printf("Item canceled successfully!\n");
+            }
+        } else {
+            printf("Item cannot be canceled. Time window exceeded.\n");
+        }
+    } else {
+        printf("Item not found in any order.\n");
+    }
+}
+
+int authenticateUser() {
+    char username[20];
+    char password[20];
+
+    for (int attempt = 1; attempt <= 3; attempt++) {
+        printf("Enter your user name: ");
+        scanf("%s", username);
+
+        printf("Enter your password: ");
+        scanf("%s", password);
+
+        if ((strcmp(username, "John") == 0 && strcmp(password, "cust1") == 0) ||
+            (strcmp(username, "Mark") == 0 && strcmp(password, "cust2") == 0)  ) {
+            return 1;
+        } else if (strcmp(username, "Admin") == 0 && strcmp(password, "admin1") == 0) {
+            return 2; 
+        } else {
+            printf("Invalid username or password. Attempts left: %d\n", 3 - attempt);
+        }
+    }
+
+    printf("Maximum login attempts reached. Exiting...\n");
+    exit(0);
+}
+void provideFeedback() {
+    char feedback[100];
+    if (orderCount == 0) {
+        printf("No orders available to provide feedback.\n");
+        return;
+    }
+
+   
+
+    
+    printf("Enter your feedback for the latest order (max 100 characters): ");
+    
+    scanf(" %s",&feedback);
+
+    printf("Feedback submitted successfully!\n");
+}
+
+void initializeCustomers() {
+    
+    struct customer john = {1, "John", "cust1"};
+    struct customer mark = {2, "Mark", "cust2"};
+
+    
+    customers[customerCount++] = john;
+    customers[customerCount++] = mark;
+    
+    
+}
+
+void viewCustomerDetails(const char *username) {
+   
+    int customerIndex = -1;
+    for (int i = 0; i < customerCount; i++) {
+        if (strcmp(customers[i].custName, username) == 0) {
+            customerIndex = i;
+            break;
+        }
+    }
+
+    if (customerIndex == -1) {
+        printf("Customer not found.\n");
+        return;
+    }
+
+    
+    printf("\n------------------CUSTOMER DETAILS------------------");
+    printf("\nCustomer ID: %d", customers[customerIndex].custId);
+    printf("\nCustomer Name: %s", customers[customerIndex].custName);
+    
+    printf("\n----------------------------------------------------\n");
+}
+void viewSales() {
+    if (orderCount == 0) {
+        printf("No sales data available.\n");
+        return;
+    }
+
+    printf("\n------------------SALES REPORT------------------");
+    printf("\n| %-20s | %-15s |", "Product Name", "Total Sales");
+    printf("\n-----------------------------------------------");
+
+    float totalSales = 0.0;
+
+    for (int i = 0; i < sizeof(products) / sizeof(products[0]); i++) {
+        int productSales = 0;
+
+        for (int j = 0; j < orderCount; j++) {
+            for (int k = 0; k < orderHistory[j].cartSize; k++) {
+                if (orderHistory[j].products[k].id == products[i].id) {
+                    productSales += orderHistory[j].products[k].qtyAvailable;
+                }
+            }
+        }
+
+        printf("\n| %-20s | %-15d |", products[i].pname, productSales);
+        totalSales += productSales * products[i].price;
+    }
+
+    printf("\n-----------------------------------------------");
+    printf("\n| %-20s | %-15s |", "Total Sales", "");
+    printf("\n| %-20s | %-15.2f |", "", totalSales);
+    printf("\n-----------------------------------------------\n");
+}
+
+
+
+
+    
+
+int main()
+{
+   int ch, userId;
+   char username[50];
+
+    int userType = authenticateUser();
+
+    if (userType == 1) {
+        printf("Continue\n");
+   
+    
+
+        do
+        {
+            printf("\n---------------------------------------------------------------------------");
+    printf("\n| %-5s | %-20s | %-10s | %-12s |", "ID", "Product Name", "Quantity", "Price/Unit");
+    printf("\n---------------------------------------------------------------------------");
+
+    for (int i = 0; i < sizeof(products) / sizeof(products[0]); i++) {
+        printf("\n| %-5d | %-20s | %-10d | %-12.2f |", products[i].id, products[i].pname, products[i].qtyAvailable, products[i].price);
+    }
+
+    printf("\n---------------------------------------------------------------------------\n");
+
+            printf("\n------------------ORDER MANAGEMENT SYSTEM------------------");
+            printf("\n 1. Add new products to cart");
+            printf("\n 2. Display all the products in the cart");
+            printf("\n 3. Buy");
+            printf("\n 4. Apply coupon code");
+            printf("\n 5. View Purchase History");
+            printf("\n 6. View Customer Details");
+            printf("\n 7. Provide Feedback");
+            printf("\n 8. Cancel Order");
+            printf("\n 0. Exit");
+
+            printf("\nEnter your choice: ");
+            scanf("%d", &ch);
+
+            switch (ch)
+            {
+            case 0:
+                printf("Exiting...\n");
+                exit(0);
+            case 1:
+                addProductToCart();
+                break;
+            case 2:
+                 displayCart();
+                break;
+            case 3:
+                buy();
+                break;
+            case 4:
+                applyDiscountCoupon();
+                break;
+            case 5:
+                displayOrderHistory();
+                break;
+            case 6:
+                 viewCustomerDetails(username);
+                break;
+            case 7:
+                provideFeedback();
+                break;
+            case 8:
+               cancelOrder();
+                break;
+            default:
+                printf("Invalid choice\n");
+            }
+        } while (1);
+    }
+    else if(userType == 2)
+    {
+        do
+        {
+            printf("\n------------------ADMIN ------------------");
+            printf("\n 1. Display all products");
+            printf("\n 2. Update product quantity");
+            printf("\n 3. Update product price");
+            printf("\n 4. Update top 3 selling items");
+            printf("\n 5. Add new customer");
+            printf("\n 6. View Sales");
+            printf("\n 0. Exit");
+
+            printf("\nEnter your choice: ");
+            scanf("%d", &ch);
+
+            switch (ch)
+            {
+            case 0:
+                printf("Exiting...\n");
+                exit(0);
+            case 1:
+                displayProducts();
+                break;
+            case 2:
+                updateProductQuantity();
+                break;
+            case 3:
+                updateProductPrice();
+                break;
+            case 4:
+                topSellingItems();
+                break;
+            case 5:
+                addNewCustomer();
+                break;
+            case 6:
+                viewSales();
+                break;
+            default:
+                printf("Invalid choice\n");
+            }
+        } while (1);
+    }
+else{
+    printf("You have entered the wrong password or user id");
+}
+    return 0;
+}
+
